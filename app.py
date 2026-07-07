@@ -1,4 +1,7 @@
-﻿import streamlit as st
+﻿import random
+from urllib.parse import quote
+
+import streamlit as st
 
 st.set_page_config(
     page_title="오늘뭐먹지 (OneMenu)",
@@ -51,6 +54,61 @@ CATEGORIES = [
     {"key": "샐러드", "emoji": "🥗", "keywords": ["샐러드", "포케", "샤브", "다이어트", "닭가슴살"]},
 ]
 ETC_CATEGORY = {"key": "기타", "emoji": "🍽️"}
+
+HISTORY_SAMPLE = [
+    {"dow": "수", "date": "7/2", "emoji": "🍣", "menu": "일식", "restaurant": "스시로 강남점", "today": False},
+    {"dow": "목", "date": "7/3", "emoji": "🍢", "menu": "분식", "restaurant": "엽떡 판교점", "today": False},
+    {"dow": "금", "date": "7/4", "emoji": "🥡", "menu": "중식", "restaurant": "홍콩반점 0410", "today": False},
+    {"dow": "월", "date": "7/6", "emoji": "🍝", "menu": "양식", "restaurant": "올리브가든 파스타", "today": False},
+    {"dow": "화", "date": "7/7", "emoji": "🍚", "menu": "한식", "restaurant": "놀부부대찌개", "today": True},
+]
+
+RESTAURANT_DB = [
+    {"name": "이모네 백반", "category": "한식", "info": "판교역 도보 3분 · ⭐4.7", "desc": "집밥 감성 가득한 정성 한 상, 판교 직장인 인생 백반집", "tags": ["#한식", "#혼밥가능"], "catchtable": False},
+    {"name": "곱창전골명가", "category": "한식", "info": "삼평동 도보 7분 · ⭐4.4", "desc": "얼큰한 곱창전골로 스트레스까지 싹 날려버리는 곳", "tags": ["#한식", "#회식맛집"], "catchtable": False},
+    {"name": "스시안", "category": "일식", "info": "판교역 도보 4분 · ⭐4.6", "desc": "매일 공수하는 신선한 재료로 만드는 정통 스시 오마카세", "tags": ["#일식", "#오마카세"], "catchtable": True},
+    {"name": "라멘공방", "category": "일식", "info": "정자역 도보 6분 · ⭐4.3", "desc": "진한 돈코츠 육수가 일품인 숨은 라멘 맛집", "tags": ["#일식", "#혼밥가능"], "catchtable": False},
+    {"name": "파스타공장", "category": "양식", "info": "판교테크노밸리 도보 5분 · ⭐4.5", "desc": "매일 뽑는 생면으로 만드는 든든한 오늘의 파스타", "tags": ["#양식", "#데이트코스"], "catchtable": True},
+    {"name": "그릴하우스", "category": "양식", "info": "알파돔시티 도보 8분 · ⭐4.1", "desc": "육즙 가득 스테이크로 즐기는 특별한 점심 한 끼", "tags": ["#양식", "#분위기맛집"], "catchtable": True},
+    {"name": "홍콩반점0410 판교점", "category": "중식", "info": "판교역 도보 6분 · ⭐4.2", "desc": "짜장면부터 탕수육까지, 실패 없는 국민 중식당", "tags": ["#중식", "#가성비"], "catchtable": False},
+    {"name": "마라공방", "category": "중식", "info": "정자동 도보 5분 · ⭐4.4", "desc": "매콤함 마니아들의 성지, 커스텀 마라탕 전문점", "tags": ["#중식", "#매운맛"], "catchtable": False},
+    {"name": "엽기떡볶이 판교점", "category": "분식", "info": "판교역 도보 3분 · ⭐4.3", "desc": "화끈한 매운맛으로 점심 스트레스 날려주는 분식집", "tags": ["#분식", "#매운맛"], "catchtable": False},
+    {"name": "샐러디 판교점", "category": "샐러드", "info": "판교테크노밸리 도보 4분 · ⭐4.0", "desc": "가볍지만 든든하게, 커스텀 샐러드로 건강 챙기는 한 끼", "tags": ["#샐러드", "#다이어트"], "catchtable": False},
+]
+
+HISTORY_COMMENT_BANK = {
+    1: [
+        lambda m: f"이번 주 {m} 1번째~ 아직 여유만만이잖아 😎",
+        lambda m: f"{m} 첫 등장! 산뜻하게 시작해보자고 ✨",
+    ],
+    2: [
+        lambda m: f"{m} 벌써 2번째?! 이 정도면 인싸 메뉴 인정 👀",
+        lambda m: f"{m} 2번째 등판~ 은근 자주 나온다? 🤭",
+    ],
+}
+HISTORY_COMMENT_DEFAULT = [
+    lambda m, c: f"{m} 이번 주만 {c}번째... 우리 팀 완전 {m} 부먹단 아니야? 🫠",
+    lambda m, c: f"또 {m}?! 이쯤되면 {m} 명예사원 각 🏅",
+    lambda m, c: f"{m} {c}연벙 중... 이제 그만 다른 것도 만나볼 때 아니야? 👉👈",
+    lambda m, c: f"{m} 무한루프 각인데 팀 취향 확고한 듯 💅",
+    lambda m, c: f"{m} {c}번째, 슬슬 물릴 때 되지 않았어? 😵‍💫",
+]
+
+
+def build_history_comment(top_menu: str, top_count: int) -> str:
+    bank = HISTORY_COMMENT_BANK.get(top_count)
+    if bank:
+        return random.choice(bank)(top_menu)
+    return random.choice(HISTORY_COMMENT_DEFAULT)(top_menu, top_count)
+
+
+def build_map_links(name: str):
+    query = quote(f"{name} 판교")
+    return {
+        "kakao": f"https://map.kakao.com/?q={query}",
+        "naver": f"https://map.naver.com/p/search/{query}",
+        "catchtable": f"https://app.catchtable.co.kr/ct/search/total?keyword={quote(name)}",
+    }
 
 
 def classify_menu(text: str):
@@ -177,3 +235,55 @@ if st.session_state.show_result:
             }
             for name in restaurant_examples.get(st.session_state.result_title.split()[1], []):
                 st.write(f"- {name}")
+
+st.divider()
+st.subheader("📅 우리팀 최근 점심 기록")
+st.caption("지난 일주일, 우리 뭐 먹었더라")
+history_cols = st.columns(len(HISTORY_SAMPLE))
+for col, day in zip(history_cols, HISTORY_SAMPLE):
+    with col:
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        st.caption(f"{day['dow']} · {day['date']}" + (" · 오늘" if day["today"] else ""))
+        st.markdown(f"<div style='font-size:28px;'>{day['emoji']}</div>", unsafe_allow_html=True)
+        st.write(f"**{day['menu']}**")
+        st.caption(f"📍{day['restaurant']}")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+if "history_comment" not in st.session_state:
+    menu_counts = {}
+    for day in HISTORY_SAMPLE:
+        menu_counts[day["menu"]] = menu_counts.get(day["menu"], 0) + 1
+    top_menu, top_count = sorted(menu_counts.items(), key=lambda item: item[1], reverse=True)[0]
+    st.session_state.history_comment = build_history_comment(top_menu, top_count)
+st.info(st.session_state.history_comment)
+
+st.subheader("🍽️ 판교 맛집 카드")
+typed_categories = {
+    classify_menu(member["menuText"])
+    for member in st.session_state.team_members
+    if member["menuText"].strip() and classify_menu(member["menuText"]) != ETC_CATEGORY["key"]
+}
+if typed_categories:
+    resto_list = [r for r in RESTAURANT_DB if r["category"] in typed_categories]
+    st.caption(f"지금 적어주신 메뉴({', '.join(sorted(typed_categories))}) 기준으로 골라봤어요")
+else:
+    resto_list = RESTAURANT_DB
+    st.caption("카테고리별로 골라둔 판교 인근 맛집이에요 (메뉴를 적으면 맞춤 추천으로 바뀌어요)")
+
+if not resto_list:
+    resto_list = RESTAURANT_DB
+
+resto_cols = st.columns(2)
+for idx, resto in enumerate(resto_list):
+    with resto_cols[idx % 2]:
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        st.markdown(f"**{resto['name']}**")
+        st.caption(resto["info"])
+        st.write(resto["desc"])
+        st.write(" ".join(resto["tags"]))
+        links = build_map_links(resto["name"])
+        link_md = f"[🟡 카카오맵]({links['kakao']}) · [🟢 네이버맵]({links['naver']})"
+        if resto["catchtable"]:
+            link_md += f" · [🔥 실시간 웨이팅 확인하기!]({links['catchtable']})"
+        st.markdown(link_md)
+        st.markdown('</div>', unsafe_allow_html=True)
